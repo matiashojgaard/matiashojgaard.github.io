@@ -42,7 +42,7 @@
   @keyframes globeFade{0%,72%{opacity:1; visibility:visible;}100%{opacity:0; visibility:hidden;}}
 
   /* ---- Mobile menu (hidden on desktop) ---- */
-  #nav-burger{display:none; order:4; justify-self:end; align-items:center; justify-content:center; width:40px; height:40px; background:none; border:0; cursor:pointer; padding:0;}
+  #nav-burger{display:none; order:4; justify-self:end; align-items:center; justify-content:center; flex-direction:column; width:40px; height:40px; background:none; border:0; cursor:pointer; padding:0;}
   #nav-burger span{display:block; width:20px; height:1.5px; background:var(--ink); border-radius:2px; transition:transform .3s, opacity .2s;}
   #nav-burger span+span{margin-top:5px;}
   #nav-burger.is-open span:nth-child(1){transform:translateY(6.5px) rotate(45deg);}
@@ -673,16 +673,25 @@ class Component extends DCLogic {
   }
 
   setupMobileMenu() {
-    const burger = document.getElementById('nav-burger');
-    const menu = document.getElementById('mobile-menu');
-    if (!burger || !menu) return;
+    if (this._mmWired) return;          // guard against double-binding
+    this._mmWired = true;
+    const burger = () => document.getElementById('nav-burger');
+    const menu = () => document.getElementById('mobile-menu');
     const setOpen = (open) => {
-      menu.style.display = open ? 'flex' : 'none';
-      burger.classList.toggle('is-open', open);
-      burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      const m = menu(), b = burger();
+      if (!m || !b) return;
+      m.style.display = open ? 'flex' : 'none';
+      b.classList.toggle('is-open', open);
+      b.setAttribute('aria-expanded', open ? 'true' : 'false');
     };
-    burger.addEventListener('click', () => setOpen(menu.style.display !== 'flex'));
-    menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setOpen(false)));
+    // Delegated on document so it works regardless of when the nav mounts.
+    document.addEventListener('click', (e) => {
+      const b = burger(), m = menu();
+      if (!b || !m) return;
+      if (e.target === b || b.contains(e.target)) { setOpen(m.style.display !== 'flex'); return; }
+      if (m.contains(e.target)) { if (e.target.closest('a')) setOpen(false); return; }
+      if (m.style.display === 'flex') setOpen(false);   // click outside closes
+    });
   }
 
   startGlobeLoader() {
